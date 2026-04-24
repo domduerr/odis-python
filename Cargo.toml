@@ -1,0 +1,15 @@
+[package]
+name = "odis-python"
+version = "2026.4.0"
+authors = ["Dominik Dürrschnabel"]
+license = "AGPL-3.0-only"
+edition = "2021"
+
+[lib]
+name = "odis"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+odis = "2026.4.0"
+bit-set = { workspace = true }

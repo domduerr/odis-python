@@ -1,0 +1,33 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "odis"
+version = "2026.4.0"
+requires-python = ">=3.9"
+description = "Python bindings for the odis Formal Concept Analysis library"
+license = { text = "AGPL-3.0-only" }
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Repository = "https://github.com/odis-rs/odis"
+Documentation = "https://odis.github.io"
+"Issue Tracker" = "https://github.com/odis-rs/odis/issues"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
