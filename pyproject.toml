@@ -3,7 +3,7 @@ requires = ["maturin>=1.5,<2"]
 build-backend = "maturin"
 
 [project]
-name = "odis"
+name = "odis-python"
 version = "2026.4.0"
 requires-python = ">=3.9"
 description = "Python bindings for the odis Formal Concept Analysis library"

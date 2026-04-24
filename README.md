@@ -1,6 +1,6 @@
-# odis
+# odis-python
 
-[![PyPI](https://img.shields.io/pypi/v/odis.svg)](https://pypi.org/project/odis/)
+[![PyPI](https://img.shields.io/pypi/v/odis.svg)](https://pypi.org/project/odis-python/)
 
 Python bindings for the **odis** Formal Concept Analysis library, powered by Rust and PyO3.
 
@@ -17,7 +17,7 @@ interface. For an introduction to FCA see [Uta Priss's FCA page](https://www.upr
 ### Released package (PyPI)
 
 ```bash
-pip install odis
+pip install odis-python
 ```
 
 ### Development build (from source)
