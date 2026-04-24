@@ -1,6 +1,6 @@
 # odis-python
 
-[![PyPI](https://img.shields.io/pypi/v/odis.svg)](https://pypi.org/project/odis-python/)
+[![PyPI](https://img.shields.io/pypi/v/odis-python.svg)](https://pypi.org/project/odis-python/)
 
 Python bindings for the **odis** Formal Concept Analysis library, powered by Rust and PyO3.
 
@@ -157,8 +157,6 @@ svg_str = ctx.draw_svg("dimdraw", width=800, height=600)
 drawing  = ctx.draw("dimdraw")
 ```
 
----
-
 ## Concepts
 
 `FormalContext.concepts()` returns a `ConceptCollection` (eager, indexable) or a
@@ -181,8 +179,6 @@ for extent, intent in concepts:
 ```
 
 Lazy concepts are covered under [Lazy Generators & Mutation Guard](#lazy-generators--mutation-guard).
-
----
 
 ## Implications
 
@@ -220,8 +216,6 @@ while len(current) < n_attrs:
     current = nxt
 ```
 
----
-
 ## Attribute Exploration
 
 Attribute exploration is an interactive algorithm that discovers the canonical basis
@@ -254,9 +248,35 @@ The callback receives two `LabelSet` arguments — `premise` and `conclusion`:
 When a counterexample is provided, `attribute_exploration` adds that object (with the
 given attributes) to the context and continues.
 
----
-
 ## Drawing
+
+`Poset` lets you directly define a partial order. Edges describe the **covering relation**:
+`(u, v)` means node `u` is directly below node `v` (u ≺ v), given
+as 0-based indices into the node list. Cycles are rejected with `ValueError`.
+
+```python
+from odis import Poset
+
+# Diamond lattice
+p = Poset(
+    ["bottom", "left", "right", "top"],
+    [(0, 1), (0, 2), (1, 3), (2, 3)],
+)
+
+# Quick SVG
+svg = p.draw_svg("dimdraw", width=800, height=600)
+with open("order.svg", "w") as f:
+    f.write(svg)
+
+# Drawing object for programmatic access
+drawing = p.draw("dimdraw")
+if drawing is not None:
+    for node in drawing.nodes:
+        print(f"{node.object_labels[0]}: ({node.x:.1f}, {node.y:.1f})")
+    print(drawing.edges)   # list of (u, v) covering-relation pairs
+```
+
+### Concept Lattice Drawings
 
 odis can draw the concept lattice as a directed graph. Two layout algorithms are
 available: `"dimdraw"` (dimension-based, default) and `"sugiyama"` (hierarchical).
@@ -294,39 +314,6 @@ except ImportError:
     pass  # not running in a notebook
 ```
 
-`draw()` returns `None` for the empty context (no concepts, no lattice to draw).
-
-## Poset (Partial Order Drawing)
-
-`Poset` lets you directly define apartial order. Edges describe the **covering relation**:
-`(u, v)` means node `u` is directly below node `v` (u ≺ v), given
-as 0-based indices into the node list. Cycles are rejected with `ValueError`.
-
-```python
-from odis import Poset
-
-# Diamond lattice
-p = Poset(
-    ["bottom", "left", "right", "top"],
-    [(0, 1), (0, 2), (1, 3), (2, 3)],
-)
-
-# Quick SVG
-svg = p.draw_svg("dimdraw", width=800, height=600)
-with open("order.svg", "w") as f:
-    f.write(svg)
-
-# Drawing object for programmatic access
-drawing = p.draw("dimdraw")
-if drawing is not None:
-    for node in drawing.nodes:
-        print(f"{node.object_labels[0]}: ({node.x:.1f}, {node.y:.1f})")
-    print(drawing.edges)   # list of (u, v) covering-relation pairs
-```
-
-Both `"dimdraw"` and `"sugiyama"` are supported. `draw()` returns `None` only for
-an empty poset.
-
 ## Titanic
 
 The `Titanic` algorithm enumerates *iceberg concepts* — concepts whose extent meets
@@ -353,8 +340,6 @@ for c in top_concepts:
     print(f"  extent={list(c.extent)}, intent={list(c.intent)}")
 ```
 
----
-
 ## LabelSet
 
 `LabelSet` is a set-like view of string labels. It is returned by derivation
@@ -376,8 +361,6 @@ for attr in intent:
 as_list = list(intent)
 as_set  = set(intent)
 ```
-
----
 
 ## Lazy Generators & Mutation Guard
 
@@ -409,8 +392,6 @@ ctx.add_attribute("new_attr")          # OK
 
 The same guard applies to `canonical_basis(lazy=True)` and
 `Titanic().enumerate(ctx, ..., lazy=True)`.
-
----
 
 ## Error Reference
 
