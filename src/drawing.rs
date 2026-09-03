@@ -13,7 +13,7 @@ use crate::labelset::LabelSet;
 // Fields are exposed to Python in US3 (T017); stored as pub(crate) for now.
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(from_py_object, module = "odis")]
 #[derive(Clone)]
 pub struct DrawingNode {
     #[pyo3(get)]
@@ -45,7 +45,7 @@ impl DrawingNode {
 // `coordinates` and `edges` are exposed to Python; `nodes` in US3 (T017).
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct Drawing {
     #[pyo3(get)]
     pub(crate) coordinates: Vec<(f64, f64)>,
@@ -253,7 +253,7 @@ pub fn make_drawing(ctx: &PyFormalContext, algorithm: &str) -> PyResult<Option<D
 /// p = Poset(["bottom", "left", "right", "top"], [(0,1),(0,2),(1,3),(2,3)])
 /// svg = p.draw_svg("dimdraw", width=400, height=400)
 /// ```
-#[pyclass(name = "Poset")]
+#[pyclass(name = "Poset", module = "odis")]
 pub struct PyPoset {
     nodes: Vec<String>,
     edges: Vec<(u32, u32)>,

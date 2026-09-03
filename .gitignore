@@ -2,3 +2,9 @@ target/
 .pytest_cache/
 .venv/
 .vscode/
+__pycache__/
+*.py[cod]
+# maturin installs the compiled extension into python/odis/
+*.so
+*.pyd
+*.dylib

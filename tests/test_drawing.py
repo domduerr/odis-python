@@ -1,11 +1,17 @@
 """Integration tests for FormalContext.draw() and draw_svg()."""
 
+from pathlib import Path
+
 import pytest
 from odis import FormalContext
 
-LIVING_BEINGS = "odis/test_data/living_beings_and_water.cxt"
-TRIANGLES = "odis/test_data/triangles.cxt"
-DATA_FROM_PAPER = "odis/test_data/data_from_paper.cxt"
+# Absolute, so the suite does not depend on pytest's working directory
+# (mirrors the resolution in conftest.py).
+_TEST_DATA_DIR = Path(__file__).parent.parent.parent / "odis" / "test_data"
+
+LIVING_BEINGS = str(_TEST_DATA_DIR / "living_beings_and_water.cxt")
+TRIANGLES = str(_TEST_DATA_DIR / "triangles.cxt")
+DATA_FROM_PAPER = str(_TEST_DATA_DIR / "data_from_paper.cxt")
 
 EXPECTED_CONCEPT_COUNTS = {
     LIVING_BEINGS: 19,

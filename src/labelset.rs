@@ -7,7 +7,7 @@ use std::sync::Arc;
 ///
 /// Holds a cloned BitSet and a reference-counted snapshot of the originating context's
 /// label vector, ensuring label stability even after the parent context is mutated.
-#[pyclass]
+#[pyclass(from_py_object, module = "odis")]
 #[derive(Clone)]
 pub struct LabelSet {
     pub(crate) bits: BitSet,
@@ -68,11 +68,11 @@ impl LabelSet {
 
     fn to_frozenset<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
         let labels: Vec<String> = self.bits.iter().map(|i| self.labels[i].clone()).collect();
-        PyFrozenSet::new_bound(py, &labels)
+        PyFrozenSet::new(py, &labels)
     }
 }
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct LabelSetIterator {
     data: Vec<String>,
     pos: usize,

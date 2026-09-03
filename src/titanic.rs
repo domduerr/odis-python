@@ -5,7 +5,7 @@ use crate::concept::{ConceptCollection, ConceptGenerator};
 use crate::context::PyFormalContext;
 
 /// Python binding for the TITANIC iceberg-lattice algorithm.
-#[pyclass(name = "Titanic")]
+#[pyclass(name = "Titanic", module = "odis")]
 pub struct PyTitanic;
 
 #[pymethods]
@@ -22,7 +22,7 @@ impl PyTitanic {
         ctx: &mut PyFormalContext,
         min_support: u32,
         lazy: bool,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         use odis::algorithms::Titanic;
         use odis::IcebergConceptEnumerator;
 
@@ -46,14 +46,14 @@ impl PyTitanic {
                 gen_at_creation: ctx.mutation_gen.load(Ordering::SeqCst),
                 active_lazy_counter: std::sync::Arc::clone(&ctx.active_lazy),
             };
-            Ok(Py::new(py, generator)?.into_py(py))
+            Ok(Py::new(py, generator)?.into_any())
         } else {
             let coll = ConceptCollection {
                 data,
                 objects: std::sync::Arc::clone(&ctx.arc_objects),
                 attributes: std::sync::Arc::clone(&ctx.arc_attributes),
             };
-            Ok(Py::new(py, coll)?.into_py(py))
+            Ok(Py::new(py, coll)?.into_any())
         }
     }
 }

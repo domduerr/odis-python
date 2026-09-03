@@ -9,7 +9,7 @@ mod titanic;
 use pyo3::prelude::*;
 
 #[pymodule]
-fn odis(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _odis(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<context::PyFormalContext>()?;
     m.add_class::<concept::ConceptCollection>()?;
     m.add_class::<concept::Concept>()?;

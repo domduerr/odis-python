@@ -14,7 +14,7 @@ use crate::labelset::LabelSet;
 ///
 /// Holds Arc snapshots of the label vectors so that existing `ConceptCollection`,
 /// `ImplicationList`, and `LabelSet` wrappers remain valid after mutation.
-#[pyclass(name = "FormalContext")]
+#[pyclass(name = "FormalContext", module = "odis")]
 pub struct PyFormalContext {
     pub(crate) inner: FormalContext<String>,
     pub(crate) arc_objects: Arc<Vec<String>>,
@@ -80,7 +80,7 @@ impl PyFormalContext {
                 }
             }
         } else {
-            for item in names.iter()? {
+            for item in names.try_iter()? {
                 let s: String = item?.extract()?;
                 if let Some(idx) = self.inner.objects.iter().position(|o| o == &s) {
                     bits.insert(idx);
@@ -100,7 +100,7 @@ impl PyFormalContext {
                 }
             }
         } else {
-            for item in names.iter()? {
+            for item in names.try_iter()? {
                 let s: String = item?.extract()?;
                 if let Some(idx) = self.inner.attributes.iter().position(|a| a == &s) {
                     bits.insert(idx);
@@ -148,7 +148,7 @@ impl PyFormalContext {
         for (k, v) in mapping.iter() {
             let obj_name: String = k.extract()?;
             let mut attrs: Vec<String> = Vec::new();
-            for a in v.iter()? {
+            for a in v.try_iter()? {
                 let attr: String = a?.extract()?;
                 if !seen_attrs.contains(&attr) {
                     seen_attrs.push(attr.clone());
@@ -180,12 +180,12 @@ impl PyFormalContext {
 
     #[getter]
     fn objects<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
-        Ok(PyList::new_bound(py, self.inner.objects.iter().map(|s| s.as_str())))
+        PyList::new(py, self.inner.objects.iter().map(|s| s.as_str()))
     }
 
     #[getter]
     fn attributes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
-        Ok(PyList::new_bound(py, self.inner.attributes.iter().map(|s| s.as_str())))
+        PyList::new(py, self.inner.attributes.iter().map(|s| s.as_str()))
     }
 
     #[getter]
@@ -257,7 +257,7 @@ impl PyFormalContext {
         // Build attribute bits; auto-create unknown attribute names
         let mut bits = BitSet::new();
         if let Some(attr_set) = attributes {
-            for item in attr_set.iter()? {
+            for item in attr_set.try_iter()? {
                 let attr: String = item?.extract()?;
                 let idx = if let Some(i) = self.inner.attributes.iter().position(|a| a == &attr) {
                     i
@@ -331,8 +331,8 @@ impl PyFormalContext {
     // ---- Algorithms ----
 
     #[pyo3(signature = (*, lazy=false))]
-    fn concepts(&mut self, lazy: bool) -> PyResult<PyObject> {
-        Python::with_gil(|py| {
+    fn concepts(&mut self, lazy: bool) -> PyResult<Py<PyAny>> {
+        Python::attach(|py| {
             if lazy {
                 let data: Vec<(BitSet, BitSet)> = self.inner.index_concepts().collect();
                 let gen = self.active_lazy.clone();
@@ -346,7 +346,7 @@ impl PyFormalContext {
                     gen_at_creation: self.mutation_gen.load(Ordering::SeqCst),
                     active_lazy_counter: Arc::clone(&self.active_lazy),
                 };
-                Ok(Py::new(py, generator)?.into_py(py))
+                Ok(Py::new(py, generator)?.into_any())
             } else {
                 let data: Vec<(BitSet, BitSet)> = self.inner.index_concepts().collect();
                 let coll = ConceptCollection {
@@ -354,7 +354,7 @@ impl PyFormalContext {
                     objects: Arc::clone(&self.arc_objects),
                     attributes: Arc::clone(&self.arc_attributes),
                 };
-                Ok(Py::new(py, coll)?.into_py(py))
+                Ok(Py::new(py, coll)?.into_any())
             }
         })
     }
@@ -392,8 +392,8 @@ impl PyFormalContext {
     // ---- Canonical basis ----
 
     #[pyo3(signature = (*, lazy=false))]
-    fn canonical_basis(&mut self, lazy: bool) -> PyResult<PyObject> {
-        Python::with_gil(|py| {
+    fn canonical_basis(&mut self, lazy: bool) -> PyResult<Py<PyAny>> {
+        Python::attach(|py| {
             if lazy {
                 let data = self.inner.index_canonical_basis();
                 let gen = self.active_lazy.clone();
@@ -406,21 +406,21 @@ impl PyFormalContext {
                     gen_at_creation: self.mutation_gen.load(Ordering::SeqCst),
                     active_lazy_counter: Arc::clone(&self.active_lazy),
                 };
-                Ok(Py::new(py, generator)?.into_py(py))
+                Ok(Py::new(py, generator)?.into_any())
             } else {
                 let data = self.inner.index_canonical_basis();
                 let list = ImplicationList {
                     data,
                     attributes: Arc::clone(&self.arc_attributes),
                 };
-                Ok(Py::new(py, list)?.into_py(py))
+                Ok(Py::new(py, list)?.into_any())
             }
         })
     }
 
     #[pyo3(signature = (*, lazy=false))]
-    fn canonical_basis_optimised(&mut self, lazy: bool) -> PyResult<PyObject> {
-        Python::with_gil(|py| {
+    fn canonical_basis_optimised(&mut self, lazy: bool) -> PyResult<Py<PyAny>> {
+        Python::attach(|py| {
             if lazy {
                 let data = self.inner.index_canonical_basis_optimised();
                 let gen = self.active_lazy.clone();
@@ -433,14 +433,14 @@ impl PyFormalContext {
                     gen_at_creation: self.mutation_gen.load(Ordering::SeqCst),
                     active_lazy_counter: Arc::clone(&self.active_lazy),
                 };
-                Ok(Py::new(py, generator)?.into_py(py))
+                Ok(Py::new(py, generator)?.into_any())
             } else {
                 let data = self.inner.index_canonical_basis_optimised();
                 let list = ImplicationList {
                     data,
                     attributes: Arc::clone(&self.arc_attributes),
                 };
-                Ok(Py::new(py, list)?.into_py(py))
+                Ok(Py::new(py, list)?.into_any())
             }
         })
     }
@@ -457,7 +457,7 @@ impl PyFormalContext {
             } else {
                 // list of Implication objects
                 let mut v = Vec::new();
-                for item in implications.iter()? {
+                for item in implications.try_iter()? {
                     let imp = item?.extract::<PyRef<Implication>>()?;
                     v.push((imp.premise.bits.clone(), imp.conclusion.bits.clone()));
                 }
@@ -473,7 +473,7 @@ impl PyFormalContext {
 
     // ---- Attribute exploration with Python callback ----
 
-    fn attribute_exploration(&mut self, callback: PyObject) -> PyResult<ImplicationList> {
+    fn attribute_exploration(&mut self, callback: Py<PyAny>) -> PyResult<ImplicationList> {
         use std::cell::RefCell;
 
         // Arc snapshots captured by the closure
@@ -491,7 +491,7 @@ impl PyFormalContext {
                     return None;
                 }
 
-                Python::with_gil(|py| {
+                Python::attach(|py| {
                     // Build LabelSet args
                     let pls = LabelSet::new(premise_bits.clone(), Arc::clone(&arc_attributes));
                     let cls = LabelSet::new(conclusion_bits.clone(), Arc::clone(&arc_attributes));

@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::IntoPyObjectExt;
 use pyo3::types::{PyList, PySlice};
 use bit_set::BitSet;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use crate::errors;
 // ConceptCollection — eagerly computed, indexed, sliceable
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct ConceptCollection {
     pub(crate) data: Vec<(BitSet, BitSet)>,
     pub(crate) objects: Arc<Vec<String>>,
@@ -24,7 +25,7 @@ impl ConceptCollection {
         self.data.len()
     }
 
-    fn __getitem__(&self, py: Python<'_>, idx: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    fn __getitem__(&self, py: Python<'_>, idx: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
         if let Ok(i) = idx.extract::<isize>() {
             let len = self.data.len() as isize;
             let i = if i < 0 { len + i } else { i };
@@ -32,18 +33,18 @@ impl ConceptCollection {
                 return Err(pyo3::exceptions::PyIndexError::new_err("index out of range"));
             }
             let concept = self.make_concept(i as usize);
-            return Ok(Py::new(py, concept)?.into_py(py));
+            return Ok(Py::new(py, concept)?.into_any());
         }
-        if let Ok(sl) = idx.downcast::<PySlice>() {
+        if let Ok(sl) = idx.cast::<PySlice>() {
             let indices = sl.indices(self.data.len() as isize)?;
-            let mut out: Vec<PyObject> = Vec::new();
+            let mut out: Vec<Py<PyAny>> = Vec::new();
             let mut i = indices.start;
             while if indices.step > 0 { i < indices.stop } else { i > indices.stop } {
                 let concept = self.make_concept(i as usize);
-                out.push(Py::new(py, concept)?.into_py(py));
+                out.push(Py::new(py, concept)?.into_any());
                 i += indices.step;
             }
-            return Ok(PyList::new_bound(py, &out).into_py(py));
+            return Ok(PyList::new(py, &out)?.into_any().unbind());
         }
         Err(pyo3::exceptions::PyTypeError::new_err("indices must be integers or slices"))
     }
@@ -88,17 +89,17 @@ impl ConceptCollection {
         }
     }
 
-    fn to_python(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    fn to_python(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         self.data
             .iter()
             .map(|(ext_bits, int_bits)| {
                 let ext: Vec<&str> = ext_bits.iter().map(|i| self.objects[i].as_str()).collect();
                 let int_: Vec<&str> = int_bits.iter().map(|i| self.attributes[i].as_str()).collect();
                 let pair = (
-                    pyo3::types::PyFrozenSet::new_bound(py, &ext)?,
-                    pyo3::types::PyFrozenSet::new_bound(py, &int_)?,
+                    pyo3::types::PyFrozenSet::new(py, &ext)?,
+                    pyo3::types::PyFrozenSet::new(py, &int_)?,
                 );
-                Ok(pair.into_py(py))
+                pair.into_py_any(py)
             })
             .collect()
     }
@@ -117,7 +118,7 @@ impl ConceptCollection {
 // ConceptIterator
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct ConceptIterator {
     pub(crate) data: Vec<(BitSet, BitSet)>,
     pub(crate) pos: usize,
@@ -148,7 +149,7 @@ impl ConceptIterator {
 // ConceptGenerator — lazy iterator that blocks mutations while alive
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct ConceptGenerator {
     pub(crate) data: Vec<(BitSet, BitSet)>,
     pub(crate) pos: usize,
@@ -194,7 +195,7 @@ impl Drop for ConceptGenerator {
 // Concept — (extent: LabelSet, intent: LabelSet)
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(from_py_object, module = "odis")]
 #[derive(Clone)]
 pub struct Concept {
     pub(crate) extent: LabelSet,
@@ -259,14 +260,14 @@ impl Concept {
         hasher.finish()
     }
 
-    fn to_python(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn to_python(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let ext: Vec<&str> = self.extent.bits.iter().map(|i| self.extent.labels[i].as_str()).collect();
         let int_: Vec<&str> = self.intent.bits.iter().map(|i| self.intent.labels[i].as_str()).collect();
         let pair = (
-            pyo3::types::PyFrozenSet::new_bound(py, &ext)?,
-            pyo3::types::PyFrozenSet::new_bound(py, &int_)?,
+            pyo3::types::PyFrozenSet::new(py, &ext)?,
+            pyo3::types::PyFrozenSet::new(py, &int_)?,
         );
-        Ok(pair.into_py(py))
+        pair.into_py_any(py)
     }
 }
 
@@ -274,7 +275,7 @@ impl Concept {
 // ConceptPairIterator — yields the 2-element (extent, intent) sequence for Concept
 // ---------------------------------------------------------------------------
 
-#[pyclass]
+#[pyclass(module = "odis")]
 pub struct ConceptPairIterator {
     pub(crate) items: [Option<LabelSet>; 2],
     pub(crate) pos: usize,
