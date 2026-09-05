@@ -28,7 +28,7 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/odis-rs/odis"
-Documentation = "https://odis.github.io"
+Documentation = "https://domduerr.github.io/odis-web.github.io/"
 "Issue Tracker" = "https://github.com/odis-rs/odis/issues"
 
 [tool.maturin]
