@@ -543,23 +543,40 @@ impl PyFormalContext {
 
     // ---- Layout and drawing ----
 
-    #[pyo3(signature = (algorithm = "dimdraw"))]
-    fn draw(&self, py: Python<'_>, algorithm: &str) -> PyResult<Option<Py<crate::drawing::Drawing>>> {
-        let drawing = crate::drawing::make_drawing(self, algorithm)?;
+    /// `algorithm` is `"dimdraw"` (default), `"sugiyama"` or `"dimflux"`.
+    /// `timeout_ms` bounds the layout search; pass `None` for a search that runs
+    /// to a proven optimum, which can take very long on a large lattice.
+    #[pyo3(signature = (algorithm = "dimdraw", timeout_ms = Some(crate::drawing::DEFAULT_TIMEOUT_MS)))]
+    fn draw(
+        &self,
+        py: Python<'_>,
+        algorithm: &str,
+        timeout_ms: Option<u64>,
+    ) -> PyResult<Option<Py<crate::drawing::Drawing>>> {
+        let drawing = crate::drawing::make_drawing(self, algorithm, timeout_ms)?;
         match drawing {
             Some(d) => Ok(Some(Py::new(py, d)?)),
             None => Ok(None),
         }
     }
 
-    #[pyo3(signature = (algorithm = "dimdraw", width = 800, height = 600))]
-    fn draw_svg(&self, algorithm: &str, width: i64, height: i64) -> PyResult<String> {
+    /// `algorithm` is `"dimdraw"` (default), `"sugiyama"` or `"dimflux"`.
+    /// `timeout_ms` bounds the layout search; pass `None` for a search that runs
+    /// to a proven optimum, which can take very long on a large lattice.
+    #[pyo3(signature = (algorithm = "dimdraw", width = 800, height = 600, timeout_ms = Some(crate::drawing::DEFAULT_TIMEOUT_MS)))]
+    fn draw_svg(
+        &self,
+        algorithm: &str,
+        width: i64,
+        height: i64,
+        timeout_ms: Option<u64>,
+    ) -> PyResult<String> {
         if width <= 0 || height <= 0 {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "width and height must be positive integers",
             ));
         }
-        match crate::drawing::make_drawing(self, algorithm)? {
+        match crate::drawing::make_drawing(self, algorithm, timeout_ms)? {
             Some(d) => Ok(crate::drawing::render_svg_pub(&d, width as usize, height as usize)),
             None => Ok(format!(
                 "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\"></svg>"

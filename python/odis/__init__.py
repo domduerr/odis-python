@@ -31,7 +31,7 @@ from ._odis import (
 # true, which is what duck-typed code checks for.
 _AbcSet.register(LabelSet)
 
-__version__ = "2026.4.0"
+__version__ = "2026.9.0"
 
 __all__ = [
     "Concept",

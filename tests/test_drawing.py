@@ -95,11 +95,25 @@ class TestDrawCoordinates:
         assert result is not None
         assert len(result.coordinates) == 19
 
+    def test_draw_algorithm_dimflux(self):
+        ctx = FormalContext.from_file(LIVING_BEINGS)
+        result = ctx.draw(algorithm="dimflux")
+        assert result is not None
+        assert len(result.coordinates) == 19
+
     def test_draw_algorithm_sugiyama(self):
         ctx = FormalContext.from_file(LIVING_BEINGS)
         result = ctx.draw(algorithm="sugiyama")
         assert result is not None
         assert len(result.coordinates) == 19
+
+    def test_draw_accepts_a_timeout(self):
+        ctx = FormalContext.from_file(LIVING_BEINGS)
+        assert len(ctx.draw(timeout_ms=50).coordinates) == 19
+        # None asks for a proven optimum; this lattice is small enough for that.
+        assert len(ctx.draw(timeout_ms=None).coordinates) == 19
+        # Zero is a real budget, not a spelling of "unbounded".
+        assert len(ctx.draw(timeout_ms=0).coordinates) == 19
 
     def test_draw_unknown_algorithm_raises_value_error(self):
         ctx = FormalContext.from_file(LIVING_BEINGS)

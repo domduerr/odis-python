@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "odis-python"
-version = "2026.4.0"
+version = "2026.9.0"
 requires-python = ">=3.9"
 description = "Python bindings for the odis Formal Concept Analysis library"
 license = { text = "AGPL-3.0-only" }

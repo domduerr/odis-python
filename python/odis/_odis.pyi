@@ -28,9 +28,15 @@ __all__ = [
     "Titanic",
 ]
 
+# Layout search budget in milliseconds; None runs to a proven optimum.
+_TimeoutMs = int | None
+
 # A set of labels may be given as a real LabelSet or any iterable of names.
 _Names = LabelSet | Iterable[str]
-_Algorithm = Literal["dimdraw", "sugiyama"]
+_Algorithm = Literal["dimdraw", "sugiyama", "dimflux"]
+# DimFlux needs the extents and intents of the concepts, so it is not
+# available for a bare poset.
+_PosetAlgorithm = Literal["dimdraw", "sugiyama"]
 
 @final
 class LabelSet:
@@ -178,12 +184,17 @@ class Poset:
     def nodes(self) -> list[str]: ...
     @property
     def edges(self) -> list[tuple[int, int]]: ...
-    def draw(self, algorithm: _Algorithm = "dimdraw") -> Drawing | None: ...
+    def draw(
+        self,
+        algorithm: _PosetAlgorithm = "dimdraw",
+        timeout_ms: int | None = 1000,
+    ) -> Drawing | None: ...
     def draw_svg(
         self,
-        algorithm: _Algorithm = "dimdraw",
+        algorithm: _PosetAlgorithm = "dimdraw",
         width: int = 800,
         height: int = 600,
+        timeout_ms: int | None = 1000,
     ) -> str: ...
     def __repr__(self) -> str: ...
 
@@ -276,10 +287,15 @@ class FormalContext:
     ) -> ImplicationList: ...
 
     # -- drawing ----------------------------------------------------------
-    def draw(self, algorithm: _Algorithm = "dimdraw") -> Drawing | None: ...
+    def draw(
+        self,
+        algorithm: _Algorithm = "dimdraw",
+        timeout_ms: int | None = 1000,
+    ) -> Drawing | None: ...
     def draw_svg(
         self,
         algorithm: _Algorithm = "dimdraw",
         width: int = 800,
         height: int = 600,
+        timeout_ms: int | None = 1000,
     ) -> str: ...

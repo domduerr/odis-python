@@ -1,9 +1,13 @@
 [package]
 name = "odis-python"
-version = "2026.4.0"
+version = "2026.9.0"
 authors = ["Dominik Dürrschnabel"]
 license = "AGPL-3.0-only"
 edition = "2021"
+# `.cargo/` holds the local development patch redirecting the released `odis` to
+# this working tree. It must never travel with a release: inside an sdist its
+# `../odis` path does not exist and cargo fails before compiling anything.
+exclude = [".cargo/"]
 
 [lib]
 name = "_odis"
@@ -11,5 +15,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.29", features = ["extension-module"] }
-odis = "2026.4.0"
-bit-set = { workspace = true }
+odis = "2026.9.0"
+bit-set = "0.8.0"

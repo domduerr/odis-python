@@ -148,14 +148,34 @@ fn html_escape(s: &str) -> String {
 // make_drawing — shared builder called by context.rs draw() and draw_svg()
 // ---------------------------------------------------------------------------
 
-pub fn make_drawing(ctx: &PyFormalContext, algorithm: &str) -> PyResult<Option<Drawing>> {
-    use odis::algorithms::{dimdraw::DimDraw, sugiyama::Sugiyama};
-    use odis::DrawingAlgorithm;
+/// Layout budget the Python entry points use when the caller does not name one.
+/// Bounded on purpose: an unbounded search proves optimality, but the cost of
+/// that proof climbs steeply with the size of the lattice, which is not what a
+/// caller writing `ctx.draw()` is asking for.
+pub const DEFAULT_TIMEOUT_MS: u64 = odis::algorithms::DEFAULT_SEARCH_BUDGET_MS;
+
+/// Translates the Python `timeout_ms` argument: a number is a millisecond
+/// budget, `None` means the search runs to a proven optimum.
+fn budget_of(timeout_ms: Option<u64>) -> odis::algorithms::SearchBudget {
+    use odis::algorithms::SearchBudget;
+    match timeout_ms {
+        Some(ms) => SearchBudget::Milliseconds(ms),
+        None => SearchBudget::Unbounded,
+    }
+}
+
+pub fn make_drawing(
+    ctx: &PyFormalContext,
+    algorithm: &str,
+    timeout_ms: Option<u64>,
+) -> PyResult<Option<Drawing>> {
+    use odis::algorithms::{dimdraw::DimDraw, dimflux::DimFlux, sugiyama::Sugiyama};
+    use odis::{ConceptDrawingAlgorithm, DrawingAlgorithm};
 
     // Validate algorithm before doing any FCA work.
-    if algorithm != "dimdraw" && algorithm != "sugiyama" {
+    if algorithm != "dimdraw" && algorithm != "sugiyama" && algorithm != "dimflux" {
         return Err(pyo3::exceptions::PyValueError::new_err(format!(
-            "Unknown algorithm '{}'. Valid values: 'dimdraw', 'sugiyama'",
+            "Unknown algorithm '{}'. Valid values: 'dimdraw', 'sugiyama', 'dimflux'",
             algorithm
         )));
     }
@@ -171,11 +191,19 @@ pub fn make_drawing(ctx: &PyFormalContext, algorithm: &str) -> PyResult<Option<D
     };
 
     let raw_drawing = match algorithm {
-        "dimdraw" => DimDraw { timeout_ms: 0 }.draw(&lattice),
+        "dimdraw" => DimDraw {
+            budget: budget_of(timeout_ms),
+        }
+        .draw(&lattice),
         "sugiyama" => Sugiyama { vertex_spacing: 1 }.draw(&lattice),
+        "dimflux" => DimFlux {
+            budget: budget_of(timeout_ms),
+            ..DimFlux::default()
+        }
+        .draw_lattice(&lattice, ctx.inner.objects.len(), ctx.inner.attributes.len()),
         other => {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                "Unknown algorithm '{}'. Valid values: 'dimdraw', 'sugiyama'",
+                "Unknown algorithm '{}'. Valid values: 'dimdraw', 'sugiyama', 'dimflux'",
                 other
             )))
         }
@@ -288,10 +316,17 @@ impl PyPoset {
     /// Compute a layout and return a `Drawing` object.
     ///
     /// `algorithm` is `"dimdraw"` (default) or `"sugiyama"`.
+    /// `timeout_ms` bounds the DimDraw search; pass `None` for a search that
+    /// runs to a proven optimum, which can take very long on a large order.
     /// Returns `None` only when the poset is empty.
-    #[pyo3(signature = (algorithm = "dimdraw"))]
-    fn draw(&self, py: Python<'_>, algorithm: &str) -> PyResult<Option<Py<Drawing>>> {
-        match make_poset_drawing(self, algorithm)? {
+    #[pyo3(signature = (algorithm = "dimdraw", timeout_ms = Some(DEFAULT_TIMEOUT_MS)))]
+    fn draw(
+        &self,
+        py: Python<'_>,
+        algorithm: &str,
+        timeout_ms: Option<u64>,
+    ) -> PyResult<Option<Py<Drawing>>> {
+        match make_poset_drawing(self, algorithm, timeout_ms)? {
             Some(d) => Ok(Some(Py::new(py, d)?)),
             None => Ok(None),
         }
@@ -300,15 +335,23 @@ impl PyPoset {
     /// Compute a layout and render it directly as an SVG string.
     ///
     /// `algorithm` is `"dimdraw"` (default) or `"sugiyama"`.
+    /// `timeout_ms` bounds the DimDraw search; pass `None` for a search that
+    /// runs to a proven optimum, which can take very long on a large order.
     /// Returns an empty SVG for an empty poset.
-    #[pyo3(signature = (algorithm = "dimdraw", width = 800, height = 600))]
-    fn draw_svg(&self, algorithm: &str, width: i64, height: i64) -> PyResult<String> {
+    #[pyo3(signature = (algorithm = "dimdraw", width = 800, height = 600, timeout_ms = Some(DEFAULT_TIMEOUT_MS)))]
+    fn draw_svg(
+        &self,
+        algorithm: &str,
+        width: i64,
+        height: i64,
+        timeout_ms: Option<u64>,
+    ) -> PyResult<String> {
         if width <= 0 || height <= 0 {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "width and height must be positive integers",
             ));
         }
-        match make_poset_drawing(self, algorithm)? {
+        match make_poset_drawing(self, algorithm, timeout_ms)? {
             Some(d) => Ok(render_svg_pub(&d, width as usize, height as usize)),
             None => Ok(format!(
                 "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\"></svg>"
@@ -325,7 +368,11 @@ impl PyPoset {
 // make_poset_drawing — builder for PyPoset.draw() / draw_svg()
 // ---------------------------------------------------------------------------
 
-fn make_poset_drawing(poset_py: &PyPoset, algorithm: &str) -> PyResult<Option<Drawing>> {
+fn make_poset_drawing(
+    poset_py: &PyPoset,
+    algorithm: &str,
+    timeout_ms: Option<u64>,
+) -> PyResult<Option<Drawing>> {
     use odis::algorithms::{dimdraw::DimDraw, sugiyama::Sugiyama};
     use odis::{DrawingAlgorithm, Poset};
 
@@ -347,7 +394,10 @@ fn make_poset_drawing(poset_py: &PyPoset, algorithm: &str) -> PyResult<Option<Dr
     .map_err(|_| pyo3::exceptions::PyValueError::new_err("Edges form a cycle"))?;
 
     let raw_drawing = match algorithm {
-        "dimdraw" => DimDraw { timeout_ms: 0 }.draw_poset(&poset),
+        "dimdraw" => DimDraw {
+            budget: budget_of(timeout_ms),
+        }
+        .draw_poset(&poset),
         "sugiyama" => Sugiyama { vertex_spacing: 1 }.draw_poset(&poset),
         _ => unreachable!(),
     };

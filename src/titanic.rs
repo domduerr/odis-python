@@ -31,7 +31,6 @@ impl PyTitanic {
             .poset
             .nodes
             .into_iter()
-            .map(|(e, i)| (e, i))
             .collect();
 
         if lazy {

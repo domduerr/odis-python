@@ -60,19 +60,24 @@ ctx = FormalContext()
 ctx = FormalContext.from_file("odis/test_data/living_beings_and_water.cxt")
 
 # From a dict mapping each object to its set of attributes
-ctx = FormalContext.from_dict({
+animals = FormalContext.from_dict({
     "cat":  {"has_legs", "has_fur", "can_move"},
     "fish": {"lives_in_water", "can_move"},
     "fern": {"needs_chlorophyll"},
 })
 ```
 
+The examples below all use `ctx` as loaded from
+`living_beings_and_water.cxt`, whose objects are `fish leech`, `bream`, `frog`,
+`dog`, `water weeds`, `reed`, `bean` and `corn`. Note that `fish leech` is one
+object — the animal — not two.
+
 ### Introspection
 
 ```python
 n_objects, n_attributes = ctx.shape   # e.g. (8, 9)
 n = len(ctx)                          # same as ctx.shape[0] — number of objects
-print(ctx.objects)                    # ['fish', 'leech', 'bream', ...]
+print(ctx.objects)                    # ['fish leech', 'bream', 'frog', ...]
 print(ctx.attributes)                 # ['needs water to live', ...]
 print("frog" in ctx)                  # True — tests object membership
 print(repr(ctx))                      # human-readable summary
@@ -94,15 +99,17 @@ ctx["frog", "lives in water"] = True
 
 ```python
 # Add an object with no attributes
-ctx.add_object("whale")
+ctx.add_object("shark")
 
-# Add an object with some pre-set attributes
+# Add an object with some pre-set attributes. Re-using an existing name
+# raises ValueError.
 ctx.add_object("whale", {"needs water to live", "can move", "breast feeds"})
 
 # Add a new attribute column
 ctx.add_attribute("is_endangered")
 
 # Remove
+ctx.remove_object("shark")
 ctx.remove_object("whale")
 ctx.remove_attribute("is_endangered")
 
@@ -129,8 +136,10 @@ assert "clone_only" not in ctx.objects
 # Extent: the set of all objects sharing every given attribute
 extent = ctx.extent(["needs water to live", "can move"])
 
-# Intent: the set of all attributes shared by every given object
-intent = ctx.intent(["fish", "leech", "bream"])
+# Intent: the set of all attributes shared by every given object.
+# Names that are not in the context are dropped silently, so a typo here
+# quietly computes the intent of a smaller set instead of raising.
+intent = ctx.intent(["fish leech", "bream"])
 
 # Attribute hull (closure of an attribute set under the Galois connection)
 hull = ctx.attribute_hull(["needs water to live"])
@@ -143,7 +152,7 @@ ohull = ctx.object_hull(["frog"])
 neighbor = ctx.upper_neighbor(["frog"])
 
 # All results are LabelSets — iterate or convert freely
-print(list(extent))        # ['fish', 'leech', 'bream', ...]
+print(list(extent))        # ['bream', 'dog', 'fish leech', 'frog']
 print("frog" in extent)    # True or False
 ```
 
@@ -230,12 +239,7 @@ def my_oracle(premise, conclusion):
     Return True to accept; return (name, attrs) to reject with a counterexample.
     """
     print(f"Does: {list(premise)} → {list(conclusion)}?")
-
-    if list(premise) == []:
-        return True  # accept empty-premise implications unconditionally
-
-    # Reject: supply a counterexample object that has the premise but not the conclusion
-    return ("robin", {"can move", "needs water to live"})
+    return True  # accept everything: the result is the canonical basis
 
 basis = ctx.attribute_exploration(my_oracle)
 print(f"Discovered {len(basis)} implications")
@@ -247,6 +251,28 @@ The callback receives two `LabelSet` arguments — `premise` and `conclusion`:
 
 When a counterexample is provided, `attribute_exploration` adds that object (with the
 given attributes) to the context and continues.
+
+A counterexample has to be one: the object must have **every** attribute of the
+premise and **miss at least one** of the conclusion. An object that does not
+refute the implication leaves it valid, so it is proposed again — and an oracle
+that keeps answering with the same object never terminates. Deriving the
+counterexample from the premise itself is always safe:
+
+```python
+rejected = 0
+
+def counterexample_oracle(premise, conclusion):
+    global rejected
+    if "can move" in list(premise):
+        rejected += 1
+        # Has exactly the premise, so it misses the conclusion by construction.
+        return (f"counterexample_{rejected}", set(premise))
+    return True
+
+ctx_copy = ctx.copy()
+basis = ctx_copy.attribute_exploration(counterexample_oracle)
+print(f"{rejected} rejected, {len(basis)} implications, {len(ctx_copy.objects)} objects")
+```
 
 ## Drawing
 
@@ -278,8 +304,16 @@ if drawing is not None:
 
 ### Concept Lattice Drawings
 
-odis can draw the concept lattice as a directed graph. Two layout algorithms are
-available: `"dimdraw"` (dimension-based, default) and `"sugiyama"` (hierarchical).
+odis can draw the concept lattice as a directed graph. Three layout algorithms are
+available: `"dimdraw"` (dimension-based, default), `"sugiyama"` (hierarchical) and
+`"dimflux"` (a DimDraw layout refined into an additive one by a force-directed
+model, which spreads the nodes away from the edges they are not part of).
+`"dimflux"` needs the objects and attributes of a concept, so it is available on
+a context but not on a bare `Poset`.
+
+`timeout_ms` bounds the layout search and defaults to one second. Pass
+`timeout_ms=None` to search until the layout is a proven optimum — the cost of
+that proof climbs steeply with the size of the lattice, so it is opt-in.
 
 ```python
 # Quick SVG string — no intermediate Drawing object required
@@ -313,6 +347,57 @@ try:
 except ImportError:
     pass  # not running in a notebook
 ```
+
+### DimFlux
+
+`"dimflux"` starts from the DimDraw layout and projects it into the space of
+*additive* diagrams, where every concept sits at the sum of one vector per
+object in its extent and per attribute in its intent. A force-directed model
+then spreads the nodes away from the edges they are not part of, without letting
+them leave the cells DimDraw put them in.
+
+Two properties follow, and both help a reader: equal steps through the lattice
+are drawn as equal vectors — so a distributive part of the lattice comes out as
+a grid of parallelograms — and concept nodes keep their distance from unrelated
+edges.
+
+```python
+ctx = FormalContext.from_file("odis/test_data/living_beings_and_water.cxt")
+
+# The same lattice under each of the three layouts
+for algorithm in ("dimdraw", "sugiyama", "dimflux"):
+    svg = ctx.draw_svg(algorithm, width=800, height=600)
+    with open(f"lattice_{algorithm}.svg", "w") as f:
+        f.write(svg)
+
+# The additive structure shows up in the coordinates: two covering edges that
+# add the same objects and drop the same attributes come out as the same vector.
+from collections import defaultdict
+
+drawing = ctx.draw("dimflux")
+xy = drawing.coordinates
+families = defaultdict(list)
+for lower, upper in drawing.edges:
+    step = (round(xy[upper][0] - xy[lower][0], 6),
+            round(xy[upper][1] - xy[lower][1], 6))
+    families[step].append((lower, upper))
+
+parallel = {step: edges for step, edges in families.items() if len(edges) > 1}
+print(f"{len(drawing.edges)} edges drawn as {len(families)} distinct vectors")
+print(f"{len(parallel)} of those vectors are shared by more than one edge")
+```
+
+`"dimflux"` spends its search budget on the DimDraw layout it starts from, so
+`timeout_ms` trades quality against time just as it does for `"dimdraw"`:
+
+```python
+quick = ctx.draw("dimflux", timeout_ms=100)     # good enough to look at
+better = ctx.draw("dimflux", timeout_ms=5000)   # a longer search for the base layout
+```
+
+Because it needs the objects and attributes behind each node, `"dimflux"` is
+available on a `FormalContext` but not on a bare `Poset`, which carries only the
+order.
 
 ## Titanic
 

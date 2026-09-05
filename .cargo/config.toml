@@ -1,0 +1,10 @@
+# odis-python declares a dependency on the released `odis` from crates.io, so
+# that publishing and clean-checkout builds resolve correctly. The release order
+# is always: publish `odis` first, then odis-python / odis-web.
+#
+# Locally we want to build and test against the working tree instead, which is
+# what this redirect does. It lives here rather than in Cargo.toml because a
+# `[patch]` written there travels into the published sdist, where the `../odis`
+# path does not exist and cargo fails before compiling anything.
+[patch.crates-io]
+odis = { path = "../odis" }
