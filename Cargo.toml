@@ -4,9 +4,11 @@ version = "2026.9.0"
 authors = ["Dominik Dürrschnabel"]
 license = "AGPL-3.0-only"
 edition = "2021"
-# `.cargo/` holds the local development patch redirecting the released `odis` to
-# this working tree. It must never travel with a release: inside an sdist its
-# `../odis` path does not exist and cargo fails before compiling anything.
+# A `[patch]` redirecting the released `odis` to a sibling working tree belongs
+# outside this package: shipped in an sdist, or checked out on its own in CI, the
+# sibling path does not exist and cargo fails before compiling anything. The
+# redirect lives in the parent directory's .cargo/config.toml; this guards
+# against a local one reappearing here.
 exclude = [".cargo/"]
 
 [lib]
@@ -14,6 +16,8 @@ name = "_odis"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.29", features = ["extension-module"] }
+# abi3-py39 builds against the stable ABI, so one wheel per platform serves
+# every CPython from 3.9 up rather than needing one per minor version.
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 odis = "2026.9.0"
 bit-set = "0.8.0"
