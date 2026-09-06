@@ -3,6 +3,7 @@ mod labelset;
 mod concept;
 mod implication;
 mod context;
+mod repository;
 mod drawing;
 mod titanic;
 
@@ -27,5 +28,7 @@ fn _odis(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<drawing::Drawing>()?;
     m.add_class::<drawing::DrawingNode>()?;
     m.add_class::<drawing::PyPoset>()?;
+    m.add_class::<repository::PyRepositoryEntry>()?;
+    m.add_function(wrap_pyfunction!(repository::repository_catalog, m)?)?;
     Ok(())
 }

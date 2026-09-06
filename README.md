@@ -25,8 +25,8 @@ pip install odis-python
 Requires a Rust toolchain and [maturin](https://www.maturin.rs/).
 
 ```bash
-git clone https://github.com/odis-rs/odis
-cd odis/odis-python
+git clone https://github.com/domduerr/odis-python
+cd odis-python
 pip install maturin
 maturin develop --release
 ```
@@ -129,6 +129,29 @@ copy = ctx.copy()
 copy.add_object("clone_only")
 assert "clone_only" not in ctx.objects
 ```
+
+### FCA Repository
+
+Contexts published in the FCA literature can be downloaded from the
+[FCA repository](https://fcarepository.org/):
+
+```python
+# Browse the catalogue
+for entry in odis.repository_catalog():
+    print(entry.title, entry.objects, "x", entry.attributes, entry.language)
+
+# Load one, either by file name ...
+ctx = odis.FormalContext.from_repository("livingbeings_en.cxt")
+
+# ... or straight off a catalogue entry
+entry = next(e for e in odis.repository_catalog() if e.filename == "triangles_en.cxt")
+ctx = entry.load()
+```
+
+A `RepositoryEntry` carries `filename`, `title`, `source`, `objects`, `attributes`,
+`language`, `description`, `note` and `url`. Everything but `filename` and `title`
+is optional in the catalogue and may be `None` or empty. A failed download raises
+`ConnectionError`.
 
 ### Derivation Operators
 

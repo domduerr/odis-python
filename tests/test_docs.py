@@ -527,3 +527,35 @@ def test_lazy_mutation_guard():
     assert isinstance(first_extent, list)
     assert got_runtime_error is True
     assert mutation_succeeded is True
+
+
+# ---------------------------------------------------------------------------
+# FCA Repository
+# ---------------------------------------------------------------------------
+
+
+def example_fca_repository():
+    catalog = odis.repository_catalog()
+    described = [
+        (entry.title, entry.objects, entry.attributes, entry.language)
+        for entry in catalog
+    ]
+
+    ctx = odis.FormalContext.from_repository("livingbeings_en.cxt")
+
+    entry = next(e for e in odis.repository_catalog() if e.filename == "triangles_en.cxt")
+    from_entry = entry.load()
+
+    return described, ctx, entry, from_entry
+
+
+def test_fca_repository():
+    try:
+        described, ctx, entry, from_entry = example_fca_repository()
+    except ConnectionError as err:
+        pytest.skip(f"FCA repository not reachable: {err}")
+
+    assert described
+    assert ctx.shape == (8, 9)
+    assert entry.url.endswith("/contexts/triangles_en.cxt")
+    assert from_entry.shape == (entry.objects, entry.attributes)

@@ -24,14 +24,16 @@ from ._odis import (
     LabelSet,
     LabelSetIterator,
     Poset,
+    RepositoryEntry,
     Titanic,
+    repository_catalog,
 )
 
 # LabelSet is set-like; registering it makes isinstance(x, collections.abc.Set)
 # true, which is what duck-typed code checks for.
 _AbcSet.register(LabelSet)
 
-__version__ = "2026.9.0"
+__version__ = "2026.9.1"
 
 __all__ = [
     "Concept",
@@ -50,6 +52,8 @@ __all__ = [
     "LabelSet",
     "LabelSetIterator",
     "Poset",
+    "RepositoryEntry",
     "Titanic",
+    "repository_catalog",
     "__version__",
 ]

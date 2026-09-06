@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "odis-python"
-version = "2026.9.0"
+version = "2026.9.1"
 requires-python = ">=3.9"
 description = "Python bindings for the odis Formal Concept Analysis library"
 license = { text = "AGPL-3.0-only" }
@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/odis-rs/odis"
+Repository = "https://github.com/domduerr/odis-python"
 Documentation = "https://domduerr.github.io/odis-web.github.io/"
-"Issue Tracker" = "https://github.com/odis-rs/odis/issues"
+"Issue Tracker" = "https://github.com/domduerr/odis-python/issues"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

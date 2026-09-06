@@ -1,6 +1,6 @@
 [package]
 name = "odis-python"
-version = "2026.9.0"
+version = "2026.9.1"
 authors = ["Dominik Dürrschnabel"]
 license = "AGPL-3.0-only"
 edition = "2021"
@@ -19,8 +19,12 @@ crate-type = ["cdylib"]
 # abi3-py39 builds against the stable ABI, so one wheel per platform serves
 # every CPython from 3.9 up rather than needing one per minor version.
 pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
-odis = "2026.9.0"
+odis = "2026.9.1"
 bit-set = "0.8.0"
+# `odis::repository` is async because it must also compile for wasm32, where the
+# only HTTP path is the browser's fetch API. Python is synchronous, so the bindings
+# drive that same future to completion here.
+tokio = { version = "1", features = ["rt", "net", "time"] }
 
 # Measured on the DimDraw branch-and-bound proof for the convex-ordinal scale,
 # the heaviest search this library runs: 25.1s -> 20.5s, with concept

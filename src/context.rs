@@ -139,6 +139,13 @@ impl PyFormalContext {
         Ok(PyFormalContext::wrap(inner))
     }
 
+    /// Downloads a context from the FCA repository by its catalogue file name,
+    /// e.g. `livingbeings_en.cxt`. See `odis.repository_catalog()` for what is available.
+    #[staticmethod]
+    fn from_repository(py: Python<'_>, filename: &str) -> PyResult<Self> {
+        crate::repository::from_repository(py, filename)
+    }
+
     #[staticmethod]
     fn from_dict<'py>(mapping: Bound<'py, PyDict>) -> PyResult<Self> {
         let mut inner = FormalContext::<String>::new();
